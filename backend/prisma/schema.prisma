@@ -1,0 +1,34 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WorkType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  unit      String
+  createdAt DateTime @default(now()) @map("created_at")
+  entries   WorkEntry[]
+
+  @@map("work_types")
+}
+
+model WorkEntry {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @db.Date
+  workTypeId  Int      @map("work_type_id")
+  workType    WorkType @relation(fields: [workTypeId], references: [id])
+  volume      Float
+  unit        String
+  executor    String
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("work_entries")
+}
