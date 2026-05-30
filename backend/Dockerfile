@@ -2,21 +2,36 @@ FROM node:20-alpine AS base
 RUN apk add --no-cache openssl
 WORKDIR /app
 
-FROM base AS deps
-COPY package*.json ./
+# Build frontend
+FROM base AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
+
+# Build backend
+FROM base AS backend-deps
+WORKDIR /app/backend
+COPY backend/package*.json ./
 RUN npm install
 
-FROM deps AS build
-COPY . .
+FROM backend-deps AS backend-build
+COPY backend/ .
 RUN npx prisma generate
 RUN npm run build
 
+# Production image
 FROM base AS production
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY prisma ./prisma
-COPY package*.json ./
+WORKDIR /app
 
+COPY --from=backend-build /app/backend/dist ./backend/dist
+COPY --from=backend-build /app/backend/node_modules ./backend/node_modules
+COPY --from=backend-build /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
+COPY --from=backend-build /app/backend/prisma ./backend/prisma
+COPY --from=backend-build /app/backend/package*.json ./backend/
+COPY --from=frontend-build /app/frontend/dist ./frontend/dist
+
+WORKDIR /app/backend
 EXPOSE 3000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

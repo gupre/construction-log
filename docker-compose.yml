@@ -16,37 +16,20 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
-    build: ./backend
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/construction_log
       PORT: 3000
-      CORS_ORIGIN: http://localhost:80
       NODE_ENV: production
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "3000:3000"
-
-  seed:
-    build: ./backend
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/construction_log
-    depends_on:
-      backend:
-        condition: service_started
-    command: sh -c "sleep 8 && node dist/seed.js"
-    restart: "no"
-
-  frontend:
-    build: ./frontend
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "80:80"
+      - "80:3000"
 
 volumes:
   pgdata:
